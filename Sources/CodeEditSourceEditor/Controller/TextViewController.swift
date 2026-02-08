@@ -163,6 +163,21 @@ public class TextViewController: NSViewController {
     /// Toggle the visibility of the gutter view in the editor.
     public var showGutter: Bool { configuration.peripherals.showGutter }
 
+    /// Optional provider for custom gutter decorations.
+    public var gutterDecorationProvider: (any GutterDecorationProviding)? {
+        didSet {
+            gutterView.decorationProvider = gutterDecorationProvider
+            gutterView.needsDisplay = true
+        }
+    }
+
+    /// Optional interaction delegate for gutter decorations.
+    public var gutterDecorationInteractionDelegate: (any GutterDecorationInteractionDelegate)? {
+        didSet {
+            gutterView.decorationInteractionDelegate = gutterDecorationInteractionDelegate
+        }
+    }
+
     /// Toggle the visibility of the minimap view in the editor.
     public var showMinimap: Bool { configuration.peripherals.showMinimap }
 

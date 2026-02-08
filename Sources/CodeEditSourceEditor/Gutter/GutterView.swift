@@ -89,6 +89,11 @@ public class GutterView: NSView {
 
     private var fontLineHeight = 1.0
 
+    /// Optional provider for per-line decorations.
+    public weak var decorationProvider: (any GutterDecorationProviding)?
+    /// Optional interaction delegate for gutter decorations.
+    public weak var decorationInteractionDelegate: (any GutterDecorationInteractionDelegate)?
+
     private func updateFontLineHeight() {
         let string = NSAttributedString(string: "0", attributes: [.font: font])
         let typesetter = CTTypesetterCreateWithAttributedString(string)
@@ -176,7 +181,9 @@ public class GutterView: NSView {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.needsDisplay = true
+            guard let self else { return }
+            self.needsDisplay = true
+            self.window?.invalidateCursorRects(for: self)
         }
     }
 
@@ -314,6 +321,48 @@ public class GutterView: NSView {
         context.restoreGState()
     }
 
+    private func drawDecorations(_ context: CGContext, dirtyRect: NSRect) {
+        guard let textView = textView, let decorationProvider else { return }
+
+        context.saveGState()
+        context.clip(to: dirtyRect)
+
+        for linePosition in textView.layoutManager.linesStartingAt(dirtyRect.minY, until: dirtyRect.maxY) {
+            let lineIndex = linePosition.index
+            guard let decoration = decorationProvider.decoration(for: lineIndex) else { continue }
+
+            let fragment: LineFragment? = linePosition.data.lineFragments.first?.data
+            let lineHeight = Double(fragment?.height ?? CGFloat(fontLineHeight))
+            let centerY = linePosition.yPos + CGFloat(lineHeight / 2.0)
+
+            let size = max(2, decoration.size)
+            let half = size / 2.0
+
+            let xPos = edgeInsets.leading / 2.0
+            let rect = CGRect(x: xPos - half, y: centerY - half, width: size, height: size).pixelAligned
+
+            context.setFillColor(decoration.color.cgColor)
+            switch decoration.shape {
+            case .circle:
+                context.fillEllipse(in: rect)
+            case .square:
+                context.fill(rect)
+            case .sfSymbol(let name):
+                if let image = NSImage(systemSymbolName: name, accessibilityDescription: nil) {
+                    let sizeConfig = NSImage.SymbolConfiguration(pointSize: size, weight: .medium)
+                    let colorConfig = NSImage.SymbolConfiguration(hierarchicalColor: decoration.color)
+                    let configured = image.withSymbolConfiguration(sizeConfig.applying(colorConfig)) ?? image
+                    context.saveGState()
+                    // NSImage.draw needs the graphics context unflipped for proper rendering
+                    configured.draw(in: rect)
+                    context.restoreGState()
+                }
+            }
+        }
+
+        context.restoreGState()
+    }
+
     override public func setNeedsDisplay(_ invalidRect: NSRect) {
         updateWidthIfNeeded()
         super.setNeedsDisplay(invalidRect)
@@ -327,7 +376,39 @@ public class GutterView: NSView {
         drawBackground(context, dirtyRect: dirtyRect)
         drawSelectedLines(context)
         drawLineNumbers(context, dirtyRect: dirtyRect)
+        drawDecorations(context, dirtyRect: dirtyRect)
         context.restoreGState()
+    }
+
+    override public func resetCursorRects() {
+        super.resetCursorRects()
+        guard let textView = textView, let decorationProvider else { return }
+
+        for linePosition in textView.layoutManager.linesStartingAt(visibleRect.minY, until: visibleRect.maxY) {
+            if decorationProvider.decoration(for: linePosition.index) != nil {
+                let lineHeight = linePosition.data.lineFragments.first?.data.height ?? CGFloat(fontLineHeight)
+                let rect = CGRect(x: 0, y: linePosition.yPos, width: frame.width, height: CGFloat(lineHeight))
+                addCursorRect(rect, cursor: .pointingHand)
+            }
+        }
+    }
+
+    override public func mouseDown(with event: NSEvent) {
+        guard let textView = textView else { return }
+        let location = convert(event.locationInWindow, from: nil)
+        let y = location.y
+
+        if let line = textView.layoutManager.linesStartingAt(y, until: y + 1).first(where: { _ in true }) {
+            let lineIndex = line.index
+            if decorationProvider?.decoration(for: lineIndex) != nil {
+                let lineHeight = line.data.lineFragments.first?.data.height ?? CGFloat(fontLineHeight)
+                let lineRect = CGRect(x: 0, y: line.yPos, width: frame.width, height: CGFloat(lineHeight))
+                decorationInteractionDelegate?.gutterDecorationDidClick(
+                    lineIndex: lineIndex, in: self, rect: lineRect
+                )
+                needsDisplay = true
+            }
+        }
     }
 
     deinit {

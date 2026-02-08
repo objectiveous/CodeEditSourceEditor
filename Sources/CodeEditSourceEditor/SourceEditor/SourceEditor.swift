@@ -36,6 +36,8 @@ public struct SourceEditor: NSViewControllerRepresentable {
         highlightProviders: [any HighlightProviding]? = nil,
         undoManager: CEUndoManager? = nil,
         coordinators: [any TextViewCoordinator] = [],
+        gutterDecorationProvider: (any GutterDecorationProviding)? = nil,
+        gutterDecorationInteractionDelegate: (any GutterDecorationInteractionDelegate)? = nil,
         completionDelegate: CodeSuggestionDelegate? = nil,
         jumpToDefinitionDelegate: JumpToDefinitionDelegate? = nil
     ) {
@@ -46,6 +48,8 @@ public struct SourceEditor: NSViewControllerRepresentable {
         self.highlightProviders = highlightProviders
         self.undoManager = undoManager
         self.coordinators = coordinators
+        self.gutterDecorationProvider = gutterDecorationProvider
+        self.gutterDecorationInteractionDelegate = gutterDecorationInteractionDelegate
         self.completionDelegate = completionDelegate
         self.jumpToDefinitionDelegate = jumpToDefinitionDelegate
     }
@@ -69,6 +73,8 @@ public struct SourceEditor: NSViewControllerRepresentable {
         highlightProviders: [any HighlightProviding]? = nil,
         undoManager: CEUndoManager? = nil,
         coordinators: [any TextViewCoordinator] = [],
+        gutterDecorationProvider: (any GutterDecorationProviding)? = nil,
+        gutterDecorationInteractionDelegate: (any GutterDecorationInteractionDelegate)? = nil,
         completionDelegate: CodeSuggestionDelegate? = nil,
         jumpToDefinitionDelegate: JumpToDefinitionDelegate? = nil
     ) {
@@ -79,6 +85,8 @@ public struct SourceEditor: NSViewControllerRepresentable {
         self.highlightProviders = highlightProviders
         self.undoManager = undoManager
         self.coordinators = coordinators
+        self.gutterDecorationProvider = gutterDecorationProvider
+        self.gutterDecorationInteractionDelegate = gutterDecorationInteractionDelegate
         self.completionDelegate = completionDelegate
         self.jumpToDefinitionDelegate = jumpToDefinitionDelegate
     }
@@ -90,6 +98,8 @@ public struct SourceEditor: NSViewControllerRepresentable {
     var highlightProviders: [any HighlightProviding]?
     var undoManager: CEUndoManager?
     var coordinators: [any TextViewCoordinator]
+    var gutterDecorationProvider: (any GutterDecorationProviding)?
+    var gutterDecorationInteractionDelegate: (any GutterDecorationInteractionDelegate)?
     weak var completionDelegate: CodeSuggestionDelegate?
     weak var jumpToDefinitionDelegate: JumpToDefinitionDelegate?
 
@@ -131,6 +141,8 @@ public struct SourceEditor: NSViewControllerRepresentable {
     public func updateNSViewController(_ controller: TextViewController, context: Context) {
         controller.completionDelegate = completionDelegate
         controller.jumpToDefinitionDelegate = jumpToDefinitionDelegate
+        controller.gutterDecorationProvider = gutterDecorationProvider
+        controller.gutterDecorationInteractionDelegate = gutterDecorationInteractionDelegate
 
         context.coordinator.updateHighlightProviders(highlightProviders)
 
