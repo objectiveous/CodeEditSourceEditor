@@ -87,6 +87,11 @@ extension SourceEditorConfiguration {
                 controller.textView.font = font
                 controller.textView.typingAttributes = controller.attributesFor(nil)
                 controller.gutterView.font = font.rulerFont
+                // Force the layout manager to recalculate its cached estimated line height.
+                // The estimate is cached and not invalidated by font changes, causing vertical
+                // cursor movement (moveDown:) to use stale values and fail to cross line boundaries.
+                let renderDelegate = controller.textView.layoutManager.renderDelegate
+                controller.textView.layoutManager.renderDelegate = renderDelegate
                 needsHighlighterInvalidation = true
             }
 
@@ -103,6 +108,9 @@ extension SourceEditorConfiguration {
 
             if oldConfig?.lineHeightMultiple != lineHeightMultiple {
                 controller.textView.layoutManager.lineHeightMultiplier = lineHeightMultiple
+                // Also invalidate the cached estimated line height (same issue as font change above).
+                let renderDelegate = controller.textView.layoutManager.renderDelegate
+                controller.textView.layoutManager.renderDelegate = renderDelegate
             }
 
             if oldConfig?.wrapLines != wrapLines {

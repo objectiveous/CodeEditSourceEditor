@@ -209,8 +209,12 @@ extension TextViewController {
         switch event.type {
         case .keyDown:
             let tabKey: UInt16 = 0x30
+            let downArrow: UInt16 = 125
+            let upArrow: UInt16 = 126
 
-            if event.keyCode == tabKey {
+            if event.keyCode == downArrow || event.keyCode == upArrow {
+                return self.handleArrowKey(event: event, modifierFlags: modifierFlags)
+            } else if event.keyCode == tabKey {
                 return self.handleTab(event: event, modifierFlags: modifierFlags.rawValue)
             } else {
                 return self.handleCommand(event: event, modifierFlags: modifierFlags)
@@ -276,9 +280,62 @@ extension TextViewController {
             }
             jumpToDefinitionModel.performJump(at: cursor.range)
             return nil
+        case (controlKey, "n"):
+            self.textView.moveDown(nil)
+            return nil
+        case (controlKey, "p"):
+            self.textView.moveUp(nil)
+            return nil
         case (_, _):
             return event
         }
+    }
+
+    /// Handles up/down arrow key events with all modifier combinations.
+    /// Dispatches the appropriate movement method on the text view and consumes the event.
+    ///
+    /// - Returns: `nil` to consume the event after dispatching the movement action.
+    private func handleArrowKey(event: NSEvent, modifierFlags: NSEvent.ModifierFlags) -> NSEvent? {
+        let isDown = event.keyCode == 125
+        let shift = modifierFlags.contains(.shift)
+        let option = modifierFlags.contains(.option)
+        let command = modifierFlags.contains(.command)
+
+        switch (isDown, shift, option, command) {
+        // Plain arrow
+        case (true, false, false, false):
+            self.textView.moveDown(nil)
+        case (false, false, false, false):
+            self.textView.moveUp(nil)
+        // Shift+Arrow (extend selection)
+        case (true, true, false, false):
+            self.textView.moveDownAndModifySelection(nil)
+        case (false, true, false, false):
+            self.textView.moveUpAndModifySelection(nil)
+        // Option+Arrow (paragraph)
+        case (true, false, true, false):
+            self.textView.moveToEndOfParagraph(nil)
+        case (false, false, true, false):
+            self.textView.moveToBeginningOfParagraph(nil)
+        // Cmd+Arrow (document)
+        case (true, false, false, true):
+            self.textView.moveToEndOfDocument(nil)
+        case (false, false, false, true):
+            self.textView.moveToBeginningOfDocument(nil)
+        // Shift+Option+Arrow (extend selection to paragraph)
+        case (true, true, true, false):
+            self.textView.moveToEndOfParagraphAndModifySelection(nil)
+        case (false, true, true, false):
+            self.textView.moveToBeginningOfParagraphAndModifySelection(nil)
+        // Shift+Cmd+Arrow (extend selection to document)
+        case (true, true, false, true):
+            self.textView.moveToEndOfDocumentAndModifySelection(nil)
+        case (false, true, false, true):
+            self.textView.moveToBeginningOfDocumentAndModifySelection(nil)
+        default:
+            return event
+        }
+        return nil
     }
 
     /// Handles the tab key event.
