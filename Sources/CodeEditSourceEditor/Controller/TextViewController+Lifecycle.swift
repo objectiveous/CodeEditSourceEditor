@@ -204,17 +204,25 @@ extension TextViewController {
         }
     }
 
+    // MARK: - Key Codes
+
+    static let tabKeyCode: UInt16 = 0x30
+    static let downArrowKeyCode: UInt16 = 125
+    static let upArrowKeyCode: UInt16 = 126
+
+    /// The set of modifier flags relevant to key binding matching.
+    /// Masks out transient flags like Caps Lock, Fn, and numeric pad that would
+    /// prevent exact-match comparisons from succeeding.
+    private static let relevantModifiers: NSEvent.ModifierFlags = [.shift, .control, .option, .command]
+
     func handleEvent(event: NSEvent) -> NSEvent? {
         let modifierFlags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            .intersection(Self.relevantModifiers)
         switch event.type {
         case .keyDown:
-            let tabKey: UInt16 = 0x30
-            let downArrow: UInt16 = 125
-            let upArrow: UInt16 = 126
-
-            if event.keyCode == downArrow || event.keyCode == upArrow {
+            if event.keyCode == Self.downArrowKeyCode || event.keyCode == Self.upArrowKeyCode {
                 return self.handleArrowKey(event: event, modifierFlags: modifierFlags)
-            } else if event.keyCode == tabKey {
+            } else if event.keyCode == Self.tabKeyCode {
                 return self.handleTab(event: event, modifierFlags: modifierFlags.rawValue)
             } else {
                 return self.handleCommand(event: event, modifierFlags: modifierFlags)
@@ -291,12 +299,14 @@ extension TextViewController {
         }
     }
 
-    /// Handles up/down arrow key events with all modifier combinations.
+    /// Handles up/down arrow key events for plain, Shift, Option, Command,
+    /// and their combinations among these modifiers.
     /// Dispatches the appropriate movement method on the text view and consumes the event.
     ///
-    /// - Returns: `nil` to consume the event after dispatching the movement action.
+    /// - Returns: `nil` to consume the event after dispatching the movement action,
+    ///   or the original event for unsupported modifier combinations.
     private func handleArrowKey(event: NSEvent, modifierFlags: NSEvent.ModifierFlags) -> NSEvent? {
-        let isDown = event.keyCode == 125
+        let isDown = event.keyCode == Self.downArrowKeyCode
         let shift = modifierFlags.contains(.shift)
         let option = modifierFlags.contains(.option)
         let command = modifierFlags.contains(.command)
