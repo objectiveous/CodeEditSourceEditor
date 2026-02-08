@@ -49,6 +49,9 @@ public enum CaptureName: Int8, CaseIterable, Sendable {
     /// - Returns: A `CaptureNames` case
     public static func fromString(_ string: String?) -> CaptureName? { // swiftlint:disable:this cyclomatic_complexity
         guard let string else { return nil }
+        if let extended = extendedCapture(string) {
+            return extended
+        }
         switch string {
         case "include":
             return .include
@@ -92,6 +95,39 @@ public enum CaptureName: Int8, CaseIterable, Sendable {
             return .keywordReturn
         case "keyword.function":
             return .keywordFunction
+        default:
+            return nil
+        }
+    }
+
+    private static func extendedCapture(_ string: String) -> CaptureName? {
+        switch string {
+        case "text.title":
+            return .keyword
+        case "text.literal":
+            return .string
+        case "text.uri":
+            return .string
+        case "text.reference":
+            return .variable
+        case "string.escape":
+            return .string
+        case "constant.builtin":
+            return .variableBuiltin
+        case "label":
+            return .tag
+        case "attribute":
+            return .typeAlternate
+        case "punctuation.delimiter":
+            return .comment
+        case "punctuation.bracket":
+            return .comment
+        case "punctuation.special":
+            return .comment
+        case "type.builtin":
+            return .type
+        case "keyword.operator":
+            return .keyword
         default:
             return nil
         }
