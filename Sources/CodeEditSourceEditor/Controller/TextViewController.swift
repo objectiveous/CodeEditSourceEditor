@@ -305,6 +305,16 @@ public class TextViewController: NSViewController {
         self.gutterView.setNeedsDisplay(self.gutterView.frame)
     }
 
+    /// Force the layout manager to recalculate its cached estimated line height.
+    ///
+    /// The estimated line height is cached and not invalidated when the font or line height multiplier changes,
+    /// causing vertical cursor movement (`moveDown:`/`moveUp:`) to use stale values and fail to cross line
+    /// boundaries. Re-assigning `renderDelegate` triggers the cache to refresh.
+    func refreshEstimatedLineHeightCache() {
+        let renderDelegate = textView.layoutManager.renderDelegate
+        textView.layoutManager.renderDelegate = renderDelegate
+    }
+
     deinit {
         if let highlighter {
             textView.removeStorageDelegate(highlighter)
